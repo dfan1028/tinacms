@@ -84,8 +84,10 @@ export interface FormStore {
     value: unknown
   ) => void;
   setActive: (formId: FormId, address: FieldAddress | null) => void;
-  // Save success: freeze the baseline at the current values -> status goes `clean`.
-  markSaved: (formId: FormId) => void;
+  // Save success: freeze the baseline at what was actually saved -> status goes
+  // `clean`. The caller passes its pre-save snapshot so edits made while the save
+  // was in flight still diff dirty; omitted, the current values are the baseline.
+  markSaved: (formId: FormId, savedValues?: FormValues) => void;
   // Explicit close: drop the scope (GC).
   removeForm: (formId: FormId) => void;
 }
@@ -196,7 +198,7 @@ export const useFormStore = create<FormStore>()(
             DEVTOOLS_ACTION.setActive
           ),
 
-        markSaved: (formId) =>
+        markSaved: (formId, savedValues) =>
           apply((state) => {
             const scope = state.forms[formId];
             if (!scope) return state;
@@ -206,7 +208,7 @@ export const useFormStore = create<FormStore>()(
                 [formId]: {
                   status: 'edited',
                   values: scope.values,
-                  baseline: scope.values,
+                  baseline: savedValues ?? scope.values,
                 },
               },
             };
